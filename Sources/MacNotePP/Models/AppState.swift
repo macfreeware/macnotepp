@@ -1,4 +1,5 @@
 import AppKit
+import PDFKit
 import Combine
 import Foundation
 import SwiftUI
@@ -1021,23 +1022,43 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Remembered between launches; used by Print Preview, PDF export and printing.
+    @Published public var printSettings: PrintSettings = {
+        if let data = UserDefaults.standard.data(forKey: "MacNotePP.printSettings"),
+           let saved = try? JSONDecoder().decode(PrintSettings.self, from: data) {
+            return saved
+        }
+        return PrintSettings()
+    }() {
+        didSet {
+            if let data = try? JSONEncoder().encode(printSettings) {
+                UserDefaults.standard.set(data, forKey: "MacNotePP.printSettings")
+            }
+        }
+    }
+
     public func printDocumentDirectly() {
         guard let doc = activeDocument else { return }
+        guard PrintLayout.canPrint(doc.content) else {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = loc("Belge yazdırmak için çok büyük", "The document is too large to print")
+            alert.informativeText = loc("En fazla 20 MB metin yazdırılabilir.", "At most 20 MB of text can be printed.")
+            alert.runModal()
+            return
+        }
+        guard let data = PrintLayout.makePDF(title: doc.displayTitle, content: doc.content, settings: printSettings),
+              let pdf = PDFDocument(data: data),
+              let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo else { return }
 
-        let printInfo = NSPrintInfo.shared
-        printInfo.horizontalPagination = .fit
-        printInfo.verticalPagination = .automatic
-        printInfo.topMargin = 36.0
-        printInfo.bottomMargin = 36.0
-        printInfo.leftMargin = 36.0
-        printInfo.rightMargin = 36.0
+        // The pages already carry their margins, so A4 prints at full size; other paper is scaled to fit.
+        let isA4 = abs(printInfo.paperSize.width - PrintLayout.pageWidth) < 3 && abs(printInfo.paperSize.height - PrintLayout.pageHeight) < 3
+        printInfo.topMargin = 0
+        printInfo.bottomMargin = 0
+        printInfo.leftMargin = 0
+        printInfo.rightMargin = 0
 
-        let printTextView = NSTextView(frame: NSRect(x: 0, y: 0, width: printInfo.paperSize.width - 72, height: printInfo.paperSize.height - 72))
-        printTextView.isEditable = false
-        printTextView.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
-        printTextView.string = doc.content
-
-        let printOperation = NSPrintOperation(view: printTextView, printInfo: printInfo)
+        guard let printOperation = pdf.printOperation(for: printInfo, scalingMode: isA4 ? .pageScaleNone : .pageScaleDownToFit, autoRotate: false) else { return }
         printOperation.showsPrintPanel = true
         printOperation.showsProgressPanel = true
         printOperation.run()

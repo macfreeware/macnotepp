@@ -7,10 +7,7 @@ public struct PrintPreviewSheetView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var currentPage: Int = 1
-    @State private var printFontSize: Double = 9.5
-    @State private var showLineNumbers: Bool = true
-    @State private var showHeaderFooter: Bool = true
-    @State private var isWordWrap: Bool = true
+    @State private var pages: [[(Int, String)]] = [[]]
     @State private var zoomScale: Double = 0.85
 
     public init(appState: AppState) {
@@ -21,57 +18,26 @@ public struct PrintPreviewSheetView: View {
         appState.activeDocument
     }
 
-    // A4 Boyutları (Points): 595.2 x 841.8 pt
-    private let a4Width: CGFloat = 595.0
-    private let a4Height: CGFloat = 842.0
-    private let margin: CGFloat = 40.0
+    private let a4Width = PrintLayout.pageWidth
+    private let a4Height = PrintLayout.pageHeight
+    private let margin = PrintLayout.margin
 
-    // Sayfa Başına Satır Sayısı Hesabı
-    private var linesPerPage: Int {
-        let contentHeight = a4Height - (margin * 2) - (showHeaderFooter ? 44.0 : 0.0)
-        let lineHeight = CGFloat(printFontSize) * 1.35
-        return max(15, Int(contentHeight / lineHeight))
+    private var printFontSize: Double { appState.printSettings.fontSize }
+    private var showLineNumbers: Bool { appState.printSettings.showLineNumbers }
+    private var showHeaderFooter: Bool { appState.printSettings.showHeaderFooter }
+
+    private var isTooLarge: Bool {
+        !PrintLayout.canPrint(document?.content ?? "")
     }
 
-    private var pages: [[(Int, String)]] {
-        guard let content = document?.content else { return [] }
-        let rawLines = content.components(separatedBy: "\n")
-        var wrappedLines: [(Int, String)] = []
-
-        let charsPerLine = isWordWrap ? max(40, Int((a4Width - margin * 2 - (showLineNumbers ? 40 : 0)) / (CGFloat(printFontSize) * 0.6))) : 9999
-
-        for (idx, line) in rawLines.enumerated() {
-            let lineNum = idx + 1
-            if line.count <= charsPerLine || !isWordWrap {
-                wrappedLines.append((lineNum, line))
-            } else {
-                var remaining = line
-                var isFirst = true
-                while !remaining.isEmpty {
-                    let takeCount = min(charsPerLine, remaining.count)
-                    let sub = String(remaining.prefix(takeCount))
-                    remaining = String(remaining.dropFirst(takeCount))
-                    wrappedLines.append((isFirst ? lineNum : 0, sub))
-                    isFirst = false
-                }
-            }
+    /// Laying out the pages walks the whole text, so it happens only when something changed.
+    private func updatePages() {
+        guard let content = document?.content, !isTooLarge else {
+            pages = [[]]
+            return
         }
-
-        let lpp = linesPerPage
-        var result: [[(Int, String)]] = []
-        var cur: [(Int, String)] = []
-
-        for item in wrappedLines {
-            cur.append(item)
-            if cur.count >= lpp {
-                result.append(cur)
-                cur = []
-            }
-        }
-        if !cur.isEmpty || result.isEmpty {
-            result.append(cur)
-        }
-        return result
+        pages = PrintLayout.pages(for: content, settings: appState.printSettings)
+        currentPage = min(currentPage, max(1, pages.count))
     }
 
     private var totalPages: Int {
@@ -176,20 +142,27 @@ public struct PrintPreviewSheetView: View {
                             Text("\(String(format: "%.1f", printFontSize)) pt")
                                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                         }
-                        Slider(value: $printFontSize, in: 7.0...15.0, step: 0.5)
+                        Slider(value: $appState.printSettings.fontSize, in: 7.0...15.0, step: 0.5)
                     }
 
                     Divider()
 
                     // Toggles
-                    Toggle(appState.loc("Satır Numaralarını Yazdır", "Print Line Numbers"), isOn: $showLineNumbers)
+                    Toggle(appState.loc("Satır Numaralarını Yazdır", "Print Line Numbers"), isOn: $appState.printSettings.showLineNumbers)
                         .font(.system(size: 11))
 
-                    Toggle(appState.loc("Üstbilgi & Altbilgi (Tarih, Başlık, Sayfa)", "Header & Footer (Date, Title, Page)"), isOn: $showHeaderFooter)
+                    Toggle(appState.loc("Üstbilgi & Altbilgi (Tarih, Başlık, Sayfa)", "Header & Footer (Date, Title, Page)"), isOn: $appState.printSettings.showHeaderFooter)
                         .font(.system(size: 11))
 
-                    Toggle(appState.loc("Sözcük Kaydırma (Word Wrap)", "Word Wrap"), isOn: $isWordWrap)
+                    Toggle(appState.loc("Sözcük Kaydırma (Word Wrap)", "Word Wrap"), isOn: $appState.printSettings.wordWrap)
                         .font(.system(size: 11))
+
+                    if isTooLarge {
+                        Text(appState.loc("Bu belge yazdırmak için çok büyük (en fazla 20 MB).", "This document is too large to print (20 MB at most)."))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                     Spacer()
 
@@ -206,6 +179,7 @@ public struct PrintPreviewSheetView: View {
                         .frame(maxWidth: .infinity)
                     }
                     .controlSize(.regular)
+                    .disabled(isTooLarge)
 
                     Button {
                         dismiss()
@@ -221,6 +195,7 @@ public struct PrintPreviewSheetView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.regular)
+                    .disabled(isTooLarge)
                 }
                 .frame(width: 230)
                 .padding(14)
@@ -242,6 +217,8 @@ public struct PrintPreviewSheetView: View {
             }
         }
         .frame(width: 860, height: 680)
+        .onAppear(perform: updatePages)
+        .onChange(of: appState.printSettings) { _, _ in updatePages() }
     }
 
     // A4 Paper Canvas View
@@ -337,88 +314,19 @@ public struct PrintPreviewSheetView: View {
         let panel = NSSavePanel()
         panel.title = appState.loc("PDF Olarak Kaydet — MacNote++", "Save as PDF — MacNote++")
         panel.allowedContentTypes = [.pdf]
-        panel.nameFieldStringValue = "\(doc.title).pdf"
+        panel.nameFieldStringValue = "\(doc.displayTitle).pdf"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        let pdfData = NSMutableData()
-        guard let consumer = CGDataConsumer(data: pdfData as CFMutableData) else { return }
-
-        var mediaBox = CGRect(x: 0, y: 0, width: a4Width, height: a4Height)
-        guard let pdfContext = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else { return }
-
-        let font = NSFont.monospacedSystemFont(ofSize: CGFloat(printFontSize), weight: .regular)
-        let numFont = NSFont.monospacedSystemFont(ofSize: CGFloat(printFontSize) - 1.5, weight: .regular)
-        let headerFont = NSFont.boldSystemFont(ofSize: 8)
-        let footerFont = NSFont.systemFont(ofSize: 7.5)
-
-        for (pageIdx, linesOnPage) in pages.enumerated() {
-            pdfContext.beginPage(mediaBox: &mediaBox)
-
-            let pageNum = pageIdx + 1
-            let dateStr = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short)
-
-            // Flipped context for Cocoa text drawing
-            let graphicsContext = NSGraphicsContext(cgContext: pdfContext, flipped: true)
-            NSGraphicsContext.current = graphicsContext
-
-            // Header
-            if showHeaderFooter {
-                (doc.displayTitle as NSString).draw(
-                    at: CGPoint(x: margin, y: margin - 15),
-                    withAttributes: [.font: headerFont, .foregroundColor: NSColor.black]
-                )
-                (dateStr as NSString).draw(
-                    at: CGPoint(x: a4Width - margin - 80, y: margin - 15),
-                    withAttributes: [.font: footerFont, .foregroundColor: NSColor.gray]
-                )
-                NSColor.gray.withAlphaComponent(0.4).setFill()
-                NSRect(x: margin, y: margin - 3, width: a4Width - (margin * 2), height: 0.5).fill()
-            }
-
-            // Body Lines
-            let startY = margin + (showHeaderFooter ? 10 : 0)
-            let lineHeight = CGFloat(printFontSize) * 1.35
-
-            for (idx, item) in linesOnPage.enumerated() {
-                let (lineNum, text) = item
-                let y = startY + (CGFloat(idx) * lineHeight)
-
-                if showLineNumbers && lineNum > 0 {
-                    (String(lineNum) as NSString).draw(
-                        at: CGPoint(x: margin, y: y),
-                        withAttributes: [.font: numFont, .foregroundColor: NSColor.gray]
-                    )
-                }
-
-                let textX = margin + (showLineNumbers ? 32 : 0)
-                (text as NSString).draw(
-                    at: CGPoint(x: textX, y: y),
-                    withAttributes: [.font: font, .foregroundColor: NSColor.black]
-                )
-            }
-
-            // Footer
-            if showHeaderFooter {
-                let footerY = a4Height - margin + 6
-                NSColor.gray.withAlphaComponent(0.4).setFill()
-                NSRect(x: margin, y: a4Height - margin, width: a4Width - (margin * 2), height: 0.5).fill()
-
-                ("MacNote++" as NSString).draw(
-                    at: CGPoint(x: margin, y: footerY),
-                    withAttributes: [.font: footerFont, .foregroundColor: NSColor.gray]
-                )
-                let pageStr = "\(pageNum) / \(totalPages)" as NSString
-                pageStr.draw(
-                    at: CGPoint(x: a4Width - margin - 40, y: footerY),
-                    withAttributes: [.font: footerFont, .foregroundColor: NSColor.gray]
-                )
-            }
-
-            pdfContext.endPage()
+        do {
+            guard let data = PrintLayout.makePDF(title: doc.displayTitle, content: doc.content, settings: appState.printSettings) else { throw CocoaError(.fileWriteUnknown) }
+            try data.write(to: url, options: .atomic)
+        } catch {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = appState.loc("PDF kaydedilemedi", "Could not save the PDF")
+            alert.informativeText = error.localizedDescription
+            alert.runModal()
         }
-
-        pdfContext.closePDF()
-        try? (pdfData as Data).write(to: url, options: .atomic)
     }
 }
