@@ -151,9 +151,9 @@ cat > "$CONTENTS_DIR/Info.plist" << 'EOF'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.1.0</string>
+    <string>1.2.0</string>
     <key>CFBundleVersion</key>
-    <string>2</string>
+    <string>3</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>
@@ -183,9 +183,266 @@ cat > "$CONTENTS_DIR/Info.plist" << 'EOF'
             <key>LSItemContentTypes</key>
             <array>
                 <string>public.text</string>
+                <string>public.plain-text</string>
                 <string>public.source-code</string>
-                <string>public.data</string>
+                <string>public.script</string>
             </array>
+        </dict>
+    </array>
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.sql</string>
+            <key>UTTypeDescription</key>
+            <string>SQL script</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>sql</string>
+                    <string>ddl</string>
+                    <string>dml</string>
+                    <string>pgsql</string>
+                    <string>tsql</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.delphi</string>
+            <key>UTTypeDescription</key>
+            <string>Delphi source</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>dpr</string>
+                    <string>dpk</string>
+                    <string>pp</string>
+                    <string>dfm</string>
+                    <string>inc</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.arduino</string>
+            <key>UTTypeDescription</key>
+            <string>Arduino sketch</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>ino</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.jsx</string>
+            <key>UTTypeDescription</key>
+            <string>JSX source</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>jsx</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.stylesheet</string>
+            <key>UTTypeDescription</key>
+            <string>Style sheet source</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>scss</string>
+                    <string>sass</string>
+                    <string>less</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.rust</string>
+            <key>UTTypeDescription</key>
+            <string>Rust source</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>rs</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.go</string>
+            <key>UTTypeDescription</key>
+            <string>Go source</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>go</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.csharp</string>
+            <key>UTTypeDescription</key>
+            <string>C# source</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>cs</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.kotlin</string>
+            <key>UTTypeDescription</key>
+            <string>Kotlin source</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>kt</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.lua</string>
+            <key>UTTypeDescription</key>
+            <string>Lua source</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>lua</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.assembly</string>
+            <key>UTTypeDescription</key>
+            <string>Assembly source</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>asm</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.batch</string>
+            <key>UTTypeDescription</key>
+            <string>Batch file</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>bat</string>
+                    <string>cmd</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.powershell</string>
+            <key>UTTypeDescription</key>
+            <string>PowerShell script</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>ps1</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.macnotepp.type.config</string>
+            <key>UTTypeDescription</key>
+            <string>Configuration file</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>ini</string>
+                    <string>cfg</string>
+                    <string>conf</string>
+                    <string>toml</string>
+                    <string>env</string>
+                </array>
+            </dict>
         </dict>
     </array>
 </dict>

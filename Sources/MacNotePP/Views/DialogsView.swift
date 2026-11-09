@@ -545,6 +545,7 @@ public struct SettingsSheetView: View {
                 settingsTabButton(title: appState.loc("Araç Çubuğu (Toolbar)", "Toolbar"), icon: "slider.horizontal.3", tag: 0)
                 settingsTabButton(title: appState.loc("Editör & Görünüm", "Editor & View"), icon: "doc.text.magnifyingglass", tag: 1)
                 settingsTabButton(title: appState.loc("Kısayollar & Kodlama", "Shortcuts & Encoding"), icon: "keyboard", tag: 2)
+                settingsTabButton(title: appState.loc("Dosya Türleri", "File Types"), icon: "doc.badge.gearshape", tag: 3)
             }
 
             Divider()
@@ -556,8 +557,10 @@ public struct SettingsSheetView: View {
                         toolbarCustomizationTab
                     } else if selectedTab == 1 {
                         editorAndViewTab
-                    } else {
+                    } else if selectedTab == 2 {
                         shortcutsAndEncodingTab
+                    } else {
+                        FileAssociationsTab(appState: appState)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)

@@ -90,6 +90,7 @@ Baytları fareyle ya da klavyeyle seçin. Denetçi her değeri kullandığı bay
 - Kodlamalar: UTF-8, BOM'lu UTF-8, UTF-16 LE / BE, Windows-1254, ISO-8859-9, Windows-1252, ASCII
 - LF, CRLF ve CR satır sonları; kaydederken korunur
 - Açık sekmeler uygulama yeniden açılınca geri gelir
+- Ayarlar'dan, seçtiğiniz dosya türleri için MacNote++'ı varsayılan uygulama yapma; önceki uygulamalara dönülebilir
 - Başka uygulamaların değiştirdiği dosyalar yenilenir; kaydedilmemiş değişiklik varsa üzerine yazmadan önce sorulur
 - Dosyanın kodlamasında olmayan karakterler kaydedilmeden önce uyarır
 - PDF çıktılı baskı önizleme

@@ -90,6 +90,7 @@ Very large files open in a safe, read-only preview. Load the whole file when you
 - Encodings: UTF-8, UTF-8 with BOM, UTF-16 LE / BE, Windows-1254, ISO-8859-9, Windows-1252, ASCII
 - Line endings: LF, CRLF and CR, kept when you save
 - Open tabs come back when you reopen the app
+- Make MacNote++ the default app for the file types you choose, from Settings; you can go back to the previous apps
 - Reloads files changed by other apps, and asks before overwriting them if you have unsaved changes
 - Warns before saving characters the file's encoding cannot hold
 - Print preview with PDF output
