@@ -125,6 +125,11 @@ public struct CodeEditorView: NSViewRepresentable {
         return container
     }
 
+    /// Hex view and Markdown modes replace the editor; the tab keeps its scroll position.
+    public static func dismantleNSView(_ nsView: EditorContainerView, coordinator: Coordinator) {
+        coordinator.rememberScrollPosition()
+    }
+
     public func updateNSView(_ containerView: EditorContainerView, context: Context) {
         context.coordinator.parent = self
         if containerView.showLineNumbers != appState.showLineNumbers {
@@ -163,6 +168,34 @@ public struct CodeEditorView: NSViewRepresentable {
 
         init(_ parent: CodeEditorView) {
             self.parent = parent
+        }
+
+        /// Stores the shown tab's scroll position in that tab before another one takes the view.
+        func rememberScrollPosition() {
+            guard let docId = currentDocId, let scrollView = textView?.enclosingScrollView else { return }
+            let y = scrollView.contentView.bounds.origin.y
+            let appState = parent.appState
+            // Not during the view update itself: publishing changes there is not allowed.
+            DispatchQueue.main.async {
+                guard let idx = appState.tabs.firstIndex(where: { $0.id == docId }),
+                      abs(appState.tabs[idx].scrollOffsetY - y) > 0.5 else { return }
+                appState.tabs[idx].scrollOffsetY = y
+            }
+        }
+
+        private func restoreScrollPosition(_ y: CGFloat, in textView: NSTextView) {
+            guard let scrollView = textView.enclosingScrollView else { return }
+            scrollView.contentView.scroll(to: NSPoint(x: 0, y: 0))
+            scrollView.reflectScrolledClipView(scrollView.contentView)
+            guard y > 0 else { return }
+            DispatchQueue.main.async { [weak textView] in
+                guard let textView, let scrollView = textView.enclosingScrollView,
+                      let layoutManager = textView.layoutManager, let container = textView.textContainer else { return }
+                let visibleHeight = scrollView.contentView.bounds.height
+                layoutManager.ensureLayout(forBoundingRect: NSRect(x: 0, y: 0, width: container.size.width, height: y + visibleHeight), in: container)
+                scrollView.contentView.scroll(to: NSPoint(x: 0, y: y))
+                scrollView.reflectScrolledClipView(scrollView.contentView)
+            }
         }
 
         func loadDocumentIfNeeded(_ doc: EditorDocument, appState: AppState, force: Bool) {
@@ -204,6 +237,7 @@ public struct CodeEditorView: NSViewRepresentable {
             if force || docChanged || textChangedExternally || previewStateChanged {
                 if docChanged {
                     textView.clearExtraCarets()
+                    rememberScrollPosition()
                 }
                 let savedRange = textView.selectedRange()
                 textView.setSelectedRange(NSRange(location: 0, length: 0))
@@ -212,6 +246,10 @@ public struct CodeEditorView: NSViewRepresentable {
                 lastAppliedPartialPreviewState = doc.isPartialPreview
                 let safeLocation = max(0, min(docChanged || textChangedExternally ? doc.cursorOffset : savedRange.location, (doc.content as NSString).length))
                 textView.setSelectedRange(NSRange(location: safeLocation, length: 0))
+                if docChanged {
+                    // A new file starts at the top; a tab shown before returns to where it was.
+                    restoreScrollPosition(doc.scrollOffsetY, in: textView)
+                }
             }
 
             if force || docChanged || textChangedExternally || themeChanged || langChanged || fontChanged || marksChanged || searchChanged {

@@ -350,8 +350,28 @@ public final class AppState: ObservableObject {
             scheduleSaveSession()
         }
     }
-    @Published public var showMarkdownPreview: Bool = false
-    @Published public var markdownDisplayMode: MarkdownDisplayMode = .split
+    /// The active tab's Markdown preview; each tab keeps its own.
+    public var showMarkdownPreview: Bool {
+        get { activeDocument?.showsMarkdownPreview ?? false }
+        set {
+            guard let idx = activeTabIndex, tabs[idx].showsMarkdownPreview != newValue else { return }
+            tabs[idx].showsMarkdownPreview = newValue
+            scheduleSaveSession()
+        }
+    }
+
+    /// The layout last chosen; tabs that never picked one use it.
+    @Published private var preferredMarkdownDisplayMode: MarkdownDisplayMode = .split
+
+    public var markdownDisplayMode: MarkdownDisplayMode {
+        get { activeDocument?.markdownDisplayMode ?? preferredMarkdownDisplayMode }
+        set {
+            preferredMarkdownDisplayMode = newValue
+            guard let idx = activeTabIndex else { return }
+            tabs[idx].markdownDisplayMode = newValue
+            scheduleSaveSession()
+        }
+    }
 
     // MARK: - Compare / Diff Mode
     @Published public var isCompareMode: Bool = false
@@ -2241,7 +2261,9 @@ public final class AppState: ObservableObject {
                 cursorColumn: doc.cursorColumn,
                 cursorOffset: doc.cursorOffset,
                 lastSavedDate: doc.isModified ? doc.lastSavedDate : nil,
-                unsavedBytes: (doc.isModified && doc.viewMode == .hex) ? doc.rawData : nil
+                unsavedBytes: (doc.isModified && doc.viewMode == .hex) ? doc.rawData : nil,
+                markdownPreview: doc.showsMarkdownPreview,
+                markdownMode: doc.markdownDisplayMode
             )
         }
         let state = PersistedSessionState(
@@ -2370,7 +2392,13 @@ public final class AppState: ObservableObject {
                     self.newTab(title: "new 1")
                     return
                 }
-                self.tabs = restored
+                let saved = Dictionary(state.tabs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                self.tabs = restored.map { tab in
+                    var tab = tab
+                    tab.showsMarkdownPreview = saved[tab.id]?.markdownPreview ?? false
+                    tab.markdownDisplayMode = saved[tab.id]?.markdownMode
+                    return tab
+                }
                 self.activeTabId = restored.contains(where: { $0.id == state.activeTabId }) ? state.activeTabId : restored.first?.id
                 return
             } else if !restoreSessionOnStartup {

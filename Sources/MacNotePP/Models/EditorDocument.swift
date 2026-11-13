@@ -54,6 +54,11 @@ public struct EditorDocument: Identifiable, Equatable {
     public var encoding: TextEncodingOption
     public var lineEnding: LineEndingType
     public var viewMode: DocumentViewMode
+    /// Markdown preview belongs to the tab, like hex view, so another file does not inherit it.
+    public var showsMarkdownPreview = false
+    public var markdownDisplayMode: MarkdownDisplayMode? = nil
+    /// Where the text was scrolled to when the tab was last shown.
+    public var scrollOffsetY: CGFloat = 0
     public var bookmarks: Set<Int> // 1-based line numbers
     public var markedRanges: [NSRange]
     public var cursorLine: Int
@@ -309,6 +314,8 @@ public struct PersistedSessionTab: Codable {
     public let lastSavedDate: Date?
     /// Exact bytes of an unsaved hex tab, which the text form cannot reproduce.
     public let unsavedBytes: Data?
+    public let markdownPreview: Bool?
+    public let markdownMode: MarkdownDisplayMode?
 }
 
 public struct PersistedSessionState: Codable {

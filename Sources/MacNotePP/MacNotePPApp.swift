@@ -207,6 +207,7 @@ public struct MainWorkspaceView: View {
                     } else if let doc = appState.activeDocument {
                         if doc.viewMode == .hex && doc.content.utf8.count < 20 * 1024 * 1024 {
                             HexEditorView(appState: appState, document: doc)
+                                .id(doc.id)
                         } else if appState.showMarkdownPreview && doc.viewMode != .hex {
                             VStack(spacing: 0) {
                                 MarkdownHeaderBar(appState: appState, document: doc)
@@ -228,11 +229,13 @@ public struct MainWorkspaceView: View {
                                         Divider()
 
                                         MarkdownRenderedContentView(appState: appState, document: doc)
+                                            .id(doc.id)
                                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                                             .clipped()
                                     }
                                 case .previewOnly:
                                     MarkdownRenderedContentView(appState: appState, document: doc)
+                                            .id(doc.id)
                                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                                         .clipped()
                                 case .sourceOnly:
@@ -270,6 +273,7 @@ public struct MainWorkspaceView: View {
                             }
                             if doc.viewMode == .hex {
                                 HexEditorView(appState: appState, document: doc)
+                                .id(doc.id)
                                     .background(Color(nsColor: .windowBackgroundColor))
                             }
                             }
