@@ -93,7 +93,7 @@ public struct HexEditorView: View {
         let currentBytes = byteSource
         let selection = selectedRange(in: currentBytes)
         let hasRange = selection.count > 1
-        let canEdit = !currentBytes.isPaged && !document.isPartialPreview
+        let canEdit = !currentBytes.isPaged && !document.isPartialPreview && !document.isReadOnly
 
         VStack(spacing: 0) {
             // Top Two-Row Responsive Control Panel
@@ -229,7 +229,9 @@ public struct HexEditorView: View {
                     Text(statusMessage.isEmpty
                          ? (currentBytes.isPaged
                             ? appState.loc("Büyük dosya: tamamı diskten okunuyor, bu görünümde düzenlenemez.", "Large file: read from disk as you scroll, not editable in this view.")
-                            : defaultStatusMessage)
+                            : (document.isReadOnly
+                               ? appState.loc("Salt okunur: düzenlemek için alttaki RO kilidine tıklayıp kilidi açın.", "Read-only: click the RO lock below to unlock editing.")
+                               : defaultStatusMessage))
                          : statusMessage)
                         .font(.system(size: 10.5, weight: .medium))
                         .foregroundStyle(.secondary)
@@ -310,7 +312,7 @@ public struct HexEditorView: View {
                         theme: appState.theme,
                         scrollRequestOffset: scrollRequestOffset,
                         onMutateByte: { offset, newVal in
-                            if var doc = appState.activeDocument, !doc.isPartialPreview {
+                            if var doc = appState.activeDocument, !doc.isPartialPreview, !doc.isReadOnly {
                                 doc.updateByte(at: offset, value: newVal)
                                 appState.activeDocument = doc
                                 statusMessage = appState.loc(

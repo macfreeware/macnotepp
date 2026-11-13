@@ -220,7 +220,7 @@ public struct EditorDocument: Identifiable, Equatable {
     }
 
     public mutating func updateByte(at index: Int, value: UInt8) {
-        guard !isPartialPreview else { return }
+        guard !isPartialPreview && !isReadOnly else { return }
         if rawData == nil {
             syncBytesFromText()
         }
@@ -236,7 +236,7 @@ public struct EditorDocument: Identifiable, Equatable {
     }
 
     public mutating func insertByte(at index: Int, value: UInt8) {
-        guard !isPartialPreview else { return }
+        guard !isPartialPreview && !isReadOnly else { return }
         if rawData == nil {
             syncBytesFromText()
         }
@@ -253,7 +253,7 @@ public struct EditorDocument: Identifiable, Equatable {
     }
 
     public mutating func deleteBytes(in range: Range<Int>) {
-        guard !isPartialPreview else { return }
+        guard !isPartialPreview && !isReadOnly else { return }
         if rawData == nil {
             syncBytesFromText()
         }
@@ -268,7 +268,7 @@ public struct EditorDocument: Identifiable, Equatable {
     }
 
     public mutating func deleteByte(at index: Int) {
-        guard !isPartialPreview else { return }
+        guard !isPartialPreview && !isReadOnly else { return }
         if rawData == nil {
             syncBytesFromText()
         }
