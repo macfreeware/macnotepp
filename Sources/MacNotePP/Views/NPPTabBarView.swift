@@ -149,6 +149,7 @@ private struct NPPTabItemView: View {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 10))
                     .foregroundStyle(Color.orange)
+                    .contentShape(Rectangle())
                     .help(appState.loc("Salt okunur — kilidi açmak için tıklayın", "Read-only — click to unlock"))
                     .onTapGesture { appState.toggleReadOnly(id: tab.id) }
             } else {
@@ -164,11 +165,12 @@ private struct NPPTabItemView: View {
 
             if tab.isReadOnly {
                 Text("RO")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
                     .background(Capsule().fill(Color.orange.opacity(0.2)))
                     .foregroundStyle(.orange)
+                    .contentShape(Rectangle())
                     .help(appState.loc("Salt okunur — kilidi açmak için tıklayın", "Read-only — click to unlock"))
                     .onTapGesture { appState.toggleReadOnly(id: tab.id) }
             }
@@ -185,11 +187,17 @@ private struct NPPTabItemView: View {
 
             if tab.viewMode == .hex {
                 Text("HEX")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
                     .background(Capsule().fill(Color.purple.opacity(0.22)))
                     .foregroundStyle(.purple)
+                    .contentShape(Capsule())
+                    .help(appState.loc("Hex görünümü — metne dönmek için tıklayın", "Hex view — click to return to text"))
+                    .onTapGesture {
+                        appState.activeTabId = tab.id
+                        appState.toggleHexView()
+                    }
             }
 
             Button(action: onClose) {

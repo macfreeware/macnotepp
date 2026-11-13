@@ -161,7 +161,9 @@ public struct NPPStatusBarView: View {
                 Text(badgeText)
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundStyle(doc?.viewMode == .hex ? Color.purple : (appState.isCompareMode ? Color.orange : Color.primary))
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, 12)
+                    .frame(minWidth: 52, maxHeight: .infinity)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help(appState.loc("Metin / Hex Görünümü Geçişi", "Toggle Text / Hex View"))
@@ -179,7 +181,9 @@ public struct NPPStatusBarView: View {
                             .font(.system(size: 11, weight: .bold, design: .monospaced))
                     }
                     .foregroundStyle(Color.orange)
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 12)
+                    .frame(minWidth: 52, maxHeight: .infinity)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help(appState.loc("Salt Okunur (Read-Only) — Kilidi değiştirmek için tıklayın", "Read-Only — Click to toggle lock"))

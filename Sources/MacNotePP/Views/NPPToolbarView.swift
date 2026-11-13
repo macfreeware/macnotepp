@@ -875,6 +875,8 @@ private struct ToolIconButton: View {
                     RoundedRectangle(cornerRadius: 4)
                         .stroke(isActive ? Color.accentColor.opacity(0.6) : Color.clear, lineWidth: 1)
                 )
+                // A plain button only reacts on drawn pixels; this makes the whole box clickable.
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .focusable(false)
