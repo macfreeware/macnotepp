@@ -888,7 +888,7 @@ public final class AppState: ObservableObject {
                     self.tabs[targetIdx].content = decoded.text
                     self.tabs[targetIdx].rawData = keptBytes
                     self.tabs[targetIdx].isModified = false
-                    self.tabs[targetIdx].isReadOnly = isLarge || isLikelyBinary
+                    self.tabs[targetIdx].isReadOnly = isLarge
                     self.tabs[targetIdx].isPartialPreview = false
                     self.tabs[targetIdx].totalFileSize = fileSize
                     self.tabs[targetIdx].language = lang
@@ -975,7 +975,7 @@ public final class AppState: ObservableObject {
                 content: decoded.text,
                 rawData: data,
                 isModified: false,
-                isReadOnly: isLikelyBinary,
+                isReadOnly: false,
                 isPartialPreview: false,
                 totalFileSize: fileSize,
                 language: lang,
@@ -1542,6 +1542,10 @@ public final class AppState: ObservableObject {
         if tabs[idx].viewMode == .text {
             tabs[idx].syncBytesFromText()
             tabs[idx].viewMode = .hex
+            // Small files are edited in hex straight away; large ones stay locked.
+            if !tabs[idx].isPartialPreview, (tabs[idx].rawData?.count ?? Int.max) <= 20 * 1024 * 1024 {
+                tabs[idx].isReadOnly = false
+            }
         } else {
             tabs[idx].viewMode = .text
         }

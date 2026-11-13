@@ -149,7 +149,8 @@ private struct NPPTabItemView: View {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 10))
                     .foregroundStyle(Color.orange)
-                    .help(appState.loc("Salt Okunur (Read-Only) — Düzenleme kilitli", "Read-Only — Editing locked"))
+                    .help(appState.loc("Salt okunur — kilidi açmak için tıklayın", "Read-only — click to unlock"))
+                    .onTapGesture { appState.toggleReadOnly(id: tab.id) }
             } else {
                 // Classic blue/red save disk icon
                 Image(systemName: "internaldrive.fill")
@@ -168,7 +169,8 @@ private struct NPPTabItemView: View {
                     .padding(.vertical, 1)
                     .background(Capsule().fill(Color.orange.opacity(0.2)))
                     .foregroundStyle(.orange)
-                    .help(appState.loc("Salt Okunur (Read-Only) — Düzenleme kilitli", "Read-Only — Editing locked"))
+                    .help(appState.loc("Salt okunur — kilidi açmak için tıklayın", "Read-only — click to unlock"))
+                    .onTapGesture { appState.toggleReadOnly(id: tab.id) }
             }
 
             if tab.isPartialPreview {
