@@ -1313,6 +1313,10 @@ public final class NativeHexCanvasNSView: NSView {
             moveCaret(to: min(bytes.count - 1, selectedOffset - selectedOffset % 16 + 15), extending: extending)
             return
 
+        case 114 where event.modifierFlags.contains(.control) || event.modifierFlags.contains(.command): // Ctrl+Insert
+            copy(nil)
+            return
+
         case 116: // Page Up
             moveCaret(to: max(selectedOffset % 16, selectedOffset - fullyVisibleRows * 16), extending: extending)
             return

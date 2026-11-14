@@ -1992,6 +1992,24 @@ public final class MacNoteTextView: NSTextView {
             return true
         }
 
+        // Windows clipboard keys, in every shortcut scheme: Ctrl+Insert copies, Shift+Insert pastes,
+        // Shift+Delete cuts. macOS reports a PC keyboard's Insert key as the Help key (114).
+        let onlyShift = flags.contains(.shift) && !flags.contains(.control) && !flags.contains(.command) && !flags.contains(.option)
+        if event.keyCode == 114 {
+            if (flags.contains(.control) || flags.contains(.command)) && !flags.contains(.shift) {
+                copy(nil)
+                return true
+            }
+            if onlyShift {
+                paste(nil)
+                return true
+            }
+        }
+        if event.keyCode == 117 && onlyShift { // Shift + Forward Delete
+            cut(nil)
+            return true
+        }
+
         let scheme = appState.shortcutScheme
         let allowMacCmd = (scheme == .macStandard || scheme == .hybrid)
         let allowWinCtrl = (scheme == .windowsNPP || scheme == .hybrid)
