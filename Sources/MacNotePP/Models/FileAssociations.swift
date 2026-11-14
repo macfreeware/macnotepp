@@ -97,9 +97,9 @@ public final class FileAssociationsModel: ObservableObject {
     public init() {}
 
     /// Copies that run from a download or a build folder make poor default apps.
+    /// A translocated copy counts by where the user installed it; its own notice covers the rest.
     public var isInstalledInApplications: Bool {
-        let path = Bundle.main.bundleURL.deletingLastPathComponent().path
-        return path == "/Applications" || path == NSHomeDirectory() + "/Applications"
+        AppLocation.isInApplicationsFolder
     }
 
     private func isThisApp(_ url: URL?) -> Bool {

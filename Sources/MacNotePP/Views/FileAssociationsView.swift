@@ -26,7 +26,9 @@ struct FileAssociationsTab: View {
             .font(.system(size: 12))
             .fixedSize(horizontal: false, vertical: true)
 
-            if !model.isInstalledInApplications {
+            if AppLocation.isTranslocated {
+                TranslocationNoticeView(appState: appState)
+            } else if !model.isInstalledInApplications {
                 Label(
                     appState.loc(
                         "MacNote++ Uygulamalar klasöründe değil. Önce oraya taşıyın; aksi halde dosya ilişkilendirmeleri sonradan bozulabilir.",
@@ -120,6 +122,46 @@ struct FileAssociationsTab: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .fixedSize()
+        }
+    }
+}
+
+/// Shown while macOS runs a quarantined copy from a temporary place (see `AppLocation`).
+struct TranslocationNoticeView: View {
+    @ObservedObject var appState: AppState
+    @State private var failed = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(AppLocation.noticeText, systemImage: "exclamationmark.triangle.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(.orange)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Button(appState.loc("Düzelt ve Yeniden Aç", "Fix and Reopen")) { fix() }
+                if failed {
+                    Text(appState.loc("İşaret kaldırılamadı. Uygulamayı Finder ile başka bir klasöre, sonra yeniden Uygulamalar'a taşıyın.",
+                                      "The mark could not be cleared. Use Finder to move the app to another folder and back to Applications."))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func fix() {
+        guard AppLocation.clearQuarantineOfInstalledApp() else {
+            failed = true
+            return
+        }
+        let app = AppLocation.installedBundleURL
+        // AppKit ignores terminate while a sheet is open, so the settings sheet goes first.
+        appState.showSettingsSheet = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if appState.prepareForUpdateRestart() {
+                Updater.relaunch(at: app)
+            }
         }
     }
 }

@@ -633,6 +633,10 @@ public struct SettingsSheetView: View {
 
             Divider()
 
+            toolbarIconSizeControl
+
+            Divider()
+
             HStack {
                 Toggle(appState.loc("Araç Çubuğu Üzerinde Canlı Düzenleme Modu", "Live Toolbar Edit Mode"), isOn: $appState.isToolbarEditMode)
                     .font(.system(size: 12, weight: .medium))
@@ -660,6 +664,59 @@ public struct SettingsSheetView: View {
             RoundedRectangle(cornerRadius: 9)
                 .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
         )
+    }
+
+    /// Icon size for large, high-resolution displays. The real toolbar follows the slider live;
+    /// the row below shows the same buttons in case the toolbar is hidden behind this window.
+    private var toolbarIconSizeControl: some View {
+        let range = AppState.toolbarIconScaleRange
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Text(appState.loc("Simge Boyutu", "Icon Size"))
+                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "textformat.size.smaller")
+                    .foregroundStyle(.secondary)
+                Slider(value: $appState.toolbarIconScale, in: range, step: 0.05)
+                    .frame(minWidth: 180)
+                Image(systemName: "textformat.size.larger")
+                    .foregroundStyle(.secondary)
+                Text(appState.loc("%\(Int((appState.toolbarIconScale * 100).rounded()))", "\(Int((appState.toolbarIconScale * 100).rounded()))%"))
+                    .font(.system(size: 12, weight: .medium).monospacedDigit())
+                    .frame(width: 44, alignment: .trailing)
+                Button(appState.loc("Varsayılan", "Default")) {
+                    appState.toolbarIconScale = 1.0
+                }
+                .controlSize(.small)
+                .disabled(appState.toolbarIconScale == 1.0)
+            }
+
+            HStack(spacing: 4) {
+                ToolIconButton(icon: "doc.badge.plus", tooltip: appState.loc("Yeni Sekme", "New Tab")) {}
+                ToolIconButton(icon: "folder", tooltip: appState.loc("Dosya Aç", "Open File")) {}
+                ToolIconButton(icon: "square.and.arrow.down", tooltip: appState.loc("Kaydet", "Save")) {}
+                ToolIconButton(icon: "scissors", tooltip: appState.loc("Kes", "Cut")) {}
+                ToolIconButton(icon: "doc.on.doc", tooltip: appState.loc("Kopyala", "Copy")) {}
+                ToolIconButton(icon: "magnifyingglass", tooltip: appState.loc("Bul", "Find")) {}
+                ToolIconButton(icon: "gearshape.fill", tooltip: appState.loc("Ayarlar", "Settings"), isActive: true) {}
+                Spacer(minLength: 0)
+            }
+            .environment(\.toolbarScale, CGFloat(appState.toolbarIconScale))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, minHeight: 24 * range.upperBound + 12, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(nsColor: .windowBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+            )
+
+            Text(appState.loc("Büyük ve yüksek çözünürlüklü ekranlarda simgeleri büyütün. Araç çubuğu kaydırıcıyı anında izler.", "Make the icons larger on big, high-resolution displays. The toolbar follows the slider as you drag."))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
     }
 
     private var toolbarItemsHeader: some View {

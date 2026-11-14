@@ -94,11 +94,11 @@ enum Updater {
     /// Leaves a small shell job that opens the new app once this one has quit, then quits.
     /// Only call after `AppState.prepareForUpdateRestart()` said yes, or the job outlives a cancelled quit.
     @MainActor
-    static func relaunch() {
+    static func relaunch(at app: URL = Bundle.main.bundleURL) {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/sh")
         p.arguments = ["-c", "while kill -0 \(ProcessInfo.processInfo.processIdentifier) 2>/dev/null; do sleep 0.2; done; /usr/bin/open \"$0\"",
-                       Bundle.main.bundleURL.path]
+                       app.path]
         try? p.run()
         NSApp.terminate(nil)
     }

@@ -421,6 +421,17 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// Size of the toolbar icons, 1 = the original size. Large, high-resolution displays need more.
+    public static let toolbarIconScaleRange: ClosedRange<Double> = 1.0...2.0
+    @Published public var toolbarIconScale: Double = {
+        let stored = UserDefaults.standard.double(forKey: "MacNotePP.toolbarIconScale")
+        return stored == 0 ? 1.0 : min(max(stored, AppState.toolbarIconScaleRange.lowerBound), AppState.toolbarIconScaleRange.upperBound)
+    }() {
+        didSet {
+            UserDefaults.standard.set(toolbarIconScale, forKey: "MacNotePP.toolbarIconScale")
+        }
+    }
+
     public static let defaultToolbarOrder: [ToolbarItemID] = [
         .toolsMenu,
         .newTab,
@@ -536,6 +547,7 @@ public final class AppState: ObservableObject {
         hiddenToolbarItems = AppState.defaultHiddenToolbarItems
         toolbarItemOrder = AppState.defaultToolbarOrder
         isMultiRowToolbar = true
+        toolbarIconScale = 1.0
     }
 
     // MARK: - About Window & Sheet

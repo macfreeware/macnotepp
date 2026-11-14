@@ -65,7 +65,7 @@ final class UpdateController: NSObject, NSWindowDelegate {
     func show(_ release: UpdateChecker.Release, appState: AppState) {
         panel?.close()
         let newPanel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 330),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: AppLocation.isTranslocated ? 440 : 330),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -124,7 +124,7 @@ struct UpdatePanelView: View {
             Spacer(minLength: 0)
         }
         .padding(20)
-        .frame(width: 480, height: 330)
+        .frame(width: 480, height: AppLocation.isTranslocated ? 440 : 330)
         .preferredColorScheme(appState.theme.isDark ? .dark : .light)
         .focusEffectDisabled()
         .onDisappear { work?.cancel() }
@@ -140,6 +140,9 @@ struct UpdatePanelView: View {
             }
             .frame(height: 170)
             .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+            if AppLocation.isTranslocated {
+                TranslocationNoticeView(appState: appState)
+            }
             HStack {
                 Button(appState.loc("Bu Sürümü Atla", "Skip This Version")) {
                     UserDefaults.standard.set(release.version, forKey: UpdateController.skippedVersionKey)

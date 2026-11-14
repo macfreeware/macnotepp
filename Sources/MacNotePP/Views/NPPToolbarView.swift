@@ -11,6 +11,19 @@ public struct NPPToolbarView: View {
         self.appState = appState
     }
 
+    private var toolbarScale: CGFloat { CGFloat(appState.toolbarIconScale) }
+
+    /// A menu label is drawn by AppKit, which ignores the SwiftUI font size of a symbol image.
+    /// An image already made at the wanted size keeps it.
+    private func menuSymbol(_ name: String, weight: NSFont.Weight) -> Image {
+        let config = NSImage.SymbolConfiguration(pointSize: 13 * toolbarScale, weight: weight)
+        guard let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(config) else {
+            return Image(systemName: name)
+        }
+        image.isTemplate = true
+        return Image(nsImage: image).renderingMode(.template)
+    }
+
     private var visibleOrderedItems: [ToolbarItemID] {
         if appState.isToolbarEditMode {
             return appState.toolbarItemOrder
@@ -97,6 +110,7 @@ public struct NPPToolbarView: View {
                 }
             }
         }
+        .environment(\.toolbarScale, toolbarScale)
         .background(Color(nsColor: .windowBackgroundColor))
         .overlay(alignment: .bottom) {
             Divider()
@@ -143,9 +157,9 @@ public struct NPPToolbarView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 22, height: 22)
+                    .frame(width: 22 * toolbarScale, height: 22 * toolbarScale)
                 Text("N+")
-                    .font(.system(size: 10, weight: .black, design: .monospaced))
+                    .font(.system(size: 10 * toolbarScale, weight: .black, design: .monospaced))
                     .foregroundStyle(.white)
             }
         }
@@ -201,7 +215,7 @@ public struct NPPToolbarView: View {
                 Image(systemName: "line.3.horizontal")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(.secondary.opacity(0.85))
-                    .frame(width: 10, height: 22)
+                    .frame(width: 10, height: 22 * toolbarScale)
                     .help(appState.loc("Sürükleyerek sıralayın: \(item.title(for: appState.language))", "Drag to reorder: \(item.title(for: appState.language))"))
 
                 Button {
@@ -210,7 +224,7 @@ public struct NPPToolbarView: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(.secondary)
-                        .frame(width: 10, height: 22)
+                        .frame(width: 10, height: 22 * toolbarScale)
                 }
                 .buttonStyle(.plain)
                 .help(appState.loc("Sola taşı: \(item.title(for: appState.language))", "Move left: \(item.title(for: appState.language))"))
@@ -225,7 +239,7 @@ public struct NPPToolbarView: View {
                     Image(systemName: isVisible ? "eye.fill" : "eye.slash.fill")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(isVisible ? Color.green : Color.red)
-                        .frame(width: 18, height: 22)
+                        .frame(width: 18, height: 22 * toolbarScale)
                 }
                 .buttonStyle(.plain)
                 .help(isVisible ? appState.loc("Gizle: \(item.title(for: appState.language))", "Hide: \(item.title(for: appState.language))") : appState.loc("Göster: \(item.title(for: appState.language))", "Show: \(item.title(for: appState.language))"))
@@ -236,7 +250,7 @@ public struct NPPToolbarView: View {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(.secondary)
-                        .frame(width: 10, height: 22)
+                        .frame(width: 10, height: 22 * toolbarScale)
                 }
                 .buttonStyle(.plain)
                 .help(appState.loc("Sağa taşı: \(item.title(for: appState.language))", "Move right: \(item.title(for: appState.language))"))
@@ -408,10 +422,9 @@ public struct NPPToolbarView: View {
                         }
                     }
                 } label: {
-                    Image(systemName: "cursorarrow.motionlines")
-                        .font(.system(size: 13, weight: .medium))
+                    menuSymbol("cursorarrow.motionlines", weight: .medium)
                         .foregroundStyle(appState.activeMultiCaretCount > 1 ? Color.orange : Color.primary)
-                        .frame(width: 26, height: 24)
+                        .frame(width: 26 * toolbarScale, height: 24 * toolbarScale)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(appState.activeMultiCaretCount > 1 ? Color.orange.opacity(0.20) : Color.clear)
@@ -516,9 +529,8 @@ public struct NPPToolbarView: View {
                     }
                 }
             } label: {
-                Image(systemName: "arrow.up.arrow.down.square")
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(width: 26, height: 24)
+                menuSymbol("arrow.up.arrow.down.square", weight: .medium)
+                    .frame(width: 26 * toolbarScale, height: 24 * toolbarScale)
             }
             .menuStyle(.borderlessButton)
             .focusable(false)
@@ -605,9 +617,8 @@ public struct NPPToolbarView: View {
                     }
                 }
             } label: {
-                Image(systemName: "keyboard")
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(width: 26, height: 24)
+                menuSymbol("keyboard", weight: .medium)
+                    .frame(width: 26 * toolbarScale, height: 24 * toolbarScale)
             }
             .menuStyle(.borderlessButton)
             .focusable(false)
@@ -624,9 +635,8 @@ public struct NPPToolbarView: View {
                     }
                 }
             } label: {
-                Image(systemName: "paintpalette")
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(width: 26, height: 24)
+                menuSymbol("paintpalette", weight: .medium)
+                    .frame(width: 26 * toolbarScale, height: 24 * toolbarScale)
             }
             .menuStyle(.borderlessButton)
             .focusable(false)
@@ -755,17 +765,16 @@ public struct NPPToolbarView: View {
                 }
             } label: {
                 HStack(spacing: 4) {
-                    Image(systemName: "ellipsis.circle.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                    menuSymbol("ellipsis.circle.fill", weight: .semibold)
                         .foregroundStyle(Color.accentColor)
                     Text(appState.loc("Menü", "Menu"))
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 11 * toolbarScale, weight: .semibold))
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 8 * toolbarScale, weight: .bold))
                         .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 7 * toolbarScale)
+                .padding(.vertical, 4 * toolbarScale)
                 .background(
                     RoundedRectangle(cornerRadius: 5)
                         .fill(Color.secondary.opacity(0.12))
@@ -848,7 +857,19 @@ public struct ToolbarWrapLayout: Layout {
     }
 }
 
-private struct ToolIconButton: View {
+/// Scale for the toolbar icons, from `AppState.toolbarIconScale`.
+struct ToolbarScaleKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 1
+}
+
+extension EnvironmentValues {
+    var toolbarScale: CGFloat {
+        get { self[ToolbarScaleKey.self] }
+        set { self[ToolbarScaleKey.self] = newValue }
+    }
+}
+
+struct ToolIconButton: View {
     let icon: String
     let tooltip: String
     var isActive: Bool = false
@@ -856,13 +877,14 @@ private struct ToolIconButton: View {
     let action: () -> Void
 
     @State private var isHovering = false
+    @Environment(\.toolbarScale) private var toolbarScale
 
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 13 * toolbarScale, weight: .medium))
                 .foregroundStyle(isActive ? Color.accentColor : (tint ?? Color.primary))
-                .frame(width: 26, height: 24)
+                .frame(width: 26 * toolbarScale, height: 24 * toolbarScale)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
                         .fill(
@@ -888,9 +910,11 @@ private struct ToolIconButton: View {
 }
 
 private struct ToolbarDivider: View {
+    @Environment(\.toolbarScale) private var toolbarScale
+
     var body: some View {
         Divider()
-            .frame(height: 18)
+            .frame(height: 18 * toolbarScale)
             .padding(.horizontal, 2)
     }
 }
