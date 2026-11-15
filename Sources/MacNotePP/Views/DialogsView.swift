@@ -941,6 +941,22 @@ public struct SettingsSheetView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .padding(.leading, 20)
+
+                    Toggle(appState.loc("Kaydedilmemiş Sekmeleri de Geri Yükle", "Also Restore Unsaved Tabs"), isOn: $appState.restoreUnsavedTabs)
+                        .font(.system(size: 12, weight: .medium))
+                        .padding(.leading, 20)
+                        .padding(.top, 4)
+                        .disabled(!appState.restoreSessionOnStartup)
+                    Text(appState.restoreUnsavedTabs
+                         ? appState.loc("MacNote++ kapanırken kaydedilmemiş değişiklikleri sormaz; bu sekmeler sonraki açılışta olduğu gibi geri gelir.",
+                                        "MacNote++ does not ask about unsaved changes when it quits; those tabs come back as they were at the next launch.")
+                         : appState.loc("MacNote++ kapanırken kaydedilmemiş her sekme için kaydetmek isteyip istemediğinizi sorar; kaydetmediğiniz değişiklikler geri yüklenmez. Kaydedilmiş dosyaların sekmeleri yine geri gelir.",
+                                        "MacNote++ asks whether to save each unsaved tab when it quits; changes you don't save are not restored. Tabs of saved files still come back."))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 40)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .opacity(appState.restoreSessionOnStartup ? 1 : 0.5)
                 }
 
                 Divider()

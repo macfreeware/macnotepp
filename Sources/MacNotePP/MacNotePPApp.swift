@@ -97,7 +97,7 @@ public final class MacNoteAppDelegate: NSObject, NSApplicationDelegate, NSWindow
             return .terminateNow
         }
 
-        let canTerminate = appState.confirmCloseAllModifiedDocuments()
+        let canTerminate = appState.confirmQuit()
         if canTerminate {
             appState.saveSession()
             return .terminateNow
@@ -110,7 +110,7 @@ public final class MacNoteAppDelegate: NSObject, NSApplicationDelegate, NSWindow
     // MARK: - Window Close Red 'X' Button Interception
     public func windowShouldClose(_ sender: NSWindow) -> Bool {
         guard let appState = appState else { return true }
-        let canClose = appState.confirmCloseAllModifiedDocuments()
+        let canClose = appState.confirmQuit()
         if !canClose {
             appState.restoreEditorFocus()
         }

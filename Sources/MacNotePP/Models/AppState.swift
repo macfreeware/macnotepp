@@ -258,6 +258,30 @@ public final class AppState: ObservableObject {
         }
     }
 
+    /// With session restore on: tabs with unsaved changes go into the session when MacNote++ quits
+    /// and come back at the next launch, without asking. Off: quitting asks to save them as usual.
+    @Published public var restoreUnsavedTabs: Bool = {
+        if UserDefaults.standard.object(forKey: "MacNotePP.restoreUnsavedTabs") != nil {
+            return UserDefaults.standard.bool(forKey: "MacNotePP.restoreUnsavedTabs")
+        }
+        return true
+    }() {
+        didSet {
+            UserDefaults.standard.set(restoreUnsavedTabs, forKey: "MacNotePP.restoreUnsavedTabs")
+        }
+    }
+
+    /// Whether quitting keeps unsaved tabs in the session instead of asking about each one.
+    /// A tab left unsaved by a crash still comes back either way, so nothing is lost.
+    public var keepsUnsavedTabsOnQuit: Bool {
+        restoreSessionOnStartup && restoreUnsavedTabs
+    }
+
+    /// Asked before the app or its window closes: true when it may close now.
+    public func confirmQuit() -> Bool {
+        keepsUnsavedTabsOnQuit || confirmCloseAllModifiedDocuments()
+    }
+
     // MARK: - Updates
     @Published public var checkUpdatesAutomatically: Bool = {
         if UserDefaults.standard.object(forKey: "MacNotePP.checkUpdates") != nil {
@@ -1389,7 +1413,7 @@ public final class AppState: ObservableObject {
     }
 
     public func quitApplicationSafely() {
-        let canTerminate = confirmCloseAllModifiedDocuments()
+        let canTerminate = confirmQuit()
         if canTerminate {
             saveSession()
             NSApp.terminate(nil)
