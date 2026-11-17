@@ -435,29 +435,20 @@ public final class SyntaxHighlighter {
             let italicFont = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask)
 
             let rules = rulesForLanguage(language)
-            for rule in rules {
-                guard let regex = cachedRegex(rule.pattern, options: rule.options) else { continue }
-                let color: NSColor
-                var ruleFont: NSFont = font
-
-                switch rule.tokenType {
-                case .keyword:
-                    color = theme.keywordColor
-                    ruleFont = boldFont
-                case .type:
-                    color = theme.typeColor
-                case .string:
-                    color = theme.stringColor
-                case .comment:
-                    color = theme.commentColor
-                    ruleFont = italicFont
-                case .number:
-                    color = theme.numberColor
-                case .preprocessor:
-                    color = theme.preprocessorColor
-                case .function:
-                    color = theme.functionColor
+            func style(_ tokenType: TokenType) -> (NSColor, NSFont) {
+                switch tokenType {
+                case .keyword: return (theme.keywordColor, boldFont)
+                case .type: return (theme.typeColor, font)
+                case .string: return (theme.stringColor, font)
+                case .comment: return (theme.commentColor, italicFont)
+                case .number: return (theme.numberColor, font)
+                case .preprocessor: return (theme.preprocessorColor, font)
+                case .function: return (theme.functionColor, font)
                 }
+            }
+            for rule in rules where rule.tokenType != .string && rule.tokenType != .comment {
+                guard let regex = cachedRegex(rule.pattern, options: rule.options) else { continue }
+                let (color, ruleFont) = style(rule.tokenType)
 
                 regex.enumerateMatches(in: textStorage.string, options: [], range: highlightRange) { match, _, _ in
                     guard let matchRange = match?.range, matchRange.location != NSNotFound else { return }
@@ -466,6 +457,16 @@ public final class SyntaxHighlighter {
                         .font: ruleFont
                     ], range: matchRange)
                 }
+            }
+
+            // Strings and comments are read together, left to right: whichever starts first wins
+            // and hides what is inside it. A quote in a comment then opens no string, and "//"
+            // inside a string starts no comment.
+            let spanRules = rules.filter { $0.tokenType == .string || $0.tokenType == .comment }
+            for span in Self.stringAndCommentSpans(in: textStorage.string, range: highlightRange,
+                                                   regexes: spanRules.map { cachedRegex($0.pattern, options: $0.options) }) {
+                let (color, spanFont) = style(spanRules[span.rule].tokenType)
+                textStorage.addAttributes([.foregroundColor: color, .font: spanFont], range: span.range)
             }
         }
 
@@ -495,6 +496,45 @@ public final class SyntaxHighlighter {
         textStorage.endEditing()
     }
 
+    /// Non-overlapping matches of the given rules, scanned from the left: at each point the rule
+    /// whose next match starts first wins (the longer one on a tie), and scanning resumes after it.
+    static func stringAndCommentSpans(in text: String, range: NSRange, regexes: [NSRegularExpression?]) -> [(rule: Int, range: NSRange)] {
+        let end = NSMaxRange(range)
+        // Searches start mid-text: "^" and "\\b" must still see the text around the search range.
+        let options: NSRegularExpression.MatchingOptions = [.withTransparentBounds, .withoutAnchoringBounds]
+        func next(_ i: Int, from position: Int) -> NSRange? {
+            guard let regex = regexes[i], position < end else { return nil }
+            var from = position
+            while from < end {
+                guard let found = regex.firstMatch(in: text, options: options, range: NSRange(location: from, length: end - from))?.range,
+                      found.location != NSNotFound else { return nil }
+                if found.length > 0 { return found }
+                from = found.location + 1 // An empty match colors nothing; look further.
+            }
+            return nil
+        }
+        var upcoming: [NSRange?] = regexes.indices.map { next($0, from: range.location) }
+        var spans: [(rule: Int, range: NSRange)] = []
+        var position = range.location
+        while true {
+            var best: Int?
+            for i in upcoming.indices {
+                if let r = upcoming[i], r.location < position { upcoming[i] = next(i, from: position) }
+                guard let r = upcoming[i] else { continue }
+                if let b = best, let current = upcoming[b] {
+                    if r.location < current.location || (r.location == current.location && r.length > current.length) { best = i }
+                } else {
+                    best = i
+                }
+            }
+            guard let winner = best, let found = upcoming[winner] else { break }
+            spans.append((winner, found))
+            position = NSMaxRange(found)
+            upcoming[winner] = next(winner, from: position)
+        }
+        return spans
+    }
+
     private enum TokenType {
         case keyword
         case type
@@ -521,7 +561,7 @@ public final class SyntaxHighlighter {
                 HighlightRule(pattern: "\\b(int|long|short|char|void|float|double|bool|unsigned|signed|size_t|uint8_t|uint16_t|uint32_t|uint64_t|int8_t|int16_t|int32_t|int64_t|string|vector|map|set|auto|wchar_t|FILE|NULL|nullptr)\\b", tokenType: .type, options: []),
                 HighlightRule(pattern: "\\b(if|else|for|while|do|switch|case|default|break|continue|return|goto|struct|class|union|enum|typedef|typename|template|namespace|using|public|private|protected|virtual|override|final|static|const|constexpr|volatile|inline|extern|sizeof|new|delete|try|catch|throw|operator|friend|this|true|false)\\b", tokenType: .keyword, options: []),
                 HighlightRule(pattern: "^\\s*#[a-zA-Z_]+.*", tokenType: .preprocessor, options: [.anchorsMatchLines]),
-                HighlightRule(pattern: "\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'", tokenType: .string, options: []),
+                HighlightRule(pattern: "\"(?:\\\\.|[^\"\\\\\\r\\n])*\"|'(?:\\\\.|[^'\\\\\\r\\n])*'", tokenType: .string, options: []),
                 HighlightRule(pattern: "//.*", tokenType: .comment, options: []),
                 HighlightRule(pattern: "/\\*[\\s\\S]*?\\*/", tokenType: .comment, options: [])
             ]
@@ -533,7 +573,7 @@ public final class SyntaxHighlighter {
                 HighlightRule(pattern: "\\b(Integer|LongInt|ShortInt|SmallInt|Byte|Word|Cardinal|Int64|UInt64|Single|Double|Extended|Real|Currency|Boolean|Char|WideChar|AnsiChar|String|AnsiString|WideString|UnicodeString|ShortString|Pointer|Variant|TObject|TComponent|TForm|TStringList|TStream|TFileStream|TextFile|File|Array|Record|Set)\\b", tokenType: .type, options: [.caseInsensitive]),
                 HighlightRule(pattern: "\\b(and|array|as|asm|begin|case|class|const|constructor|destructor|dispinterface|div|do|downto|else|end|except|exports|file|finalization|finally|for|function|goto|if|implementation|in|inherited|initialization|inline|interface|is|label|library|mod|nil|not|object|of|or|out|packed|procedure|program|property|raise|record|repeat|resourcestring|set|shl|shr|string|then|threadvar|to|try|type|unit|until|uses|var|while|with|xor|private|protected|public|published|virtual|override|overload|reintroduce|abstract|cdecl|stdcall|register|safecall|True|False|Self|Result|Exit|Break|Continue)\\b", tokenType: .keyword, options: [.caseInsensitive]),
                 HighlightRule(pattern: "\\{\\$[^\\}]*\\}|\\(\\*\\$[\\s\\S]*?\\*\\)", tokenType: .preprocessor, options: []),
-                HighlightRule(pattern: "'(?:''|[^'])*'|#\\d+", tokenType: .string, options: []),
+                HighlightRule(pattern: "'(?:''|[^'\\r\\n])*'|#\\d+", tokenType: .string, options: []),
                 HighlightRule(pattern: "//.*", tokenType: .comment, options: []),
                 HighlightRule(pattern: "\\{[^\\$][^\\}]*\\}|\\{\\}|\\(\\*[\\s\\S]*?\\*\\)", tokenType: .comment, options: [])
             ]
@@ -545,7 +585,7 @@ public final class SyntaxHighlighter {
                 HighlightRule(pattern: "\\b(INT|INTEGER|BIGINT|SMALLINT|TINYINT|DECIMAL|NUMERIC|FLOAT|REAL|DOUBLE|MONEY|BIT|BOOLEAN|BOOL|DATE|DATETIME|DATETIME2|TIMESTAMP|TIME|CHAR|VARCHAR|VARCHAR2|NVARCHAR|TEXT|NTEXT|CLOB|BLOB|BINARY|VARBINARY|UUID|UNIQUEIDENTIFIER|JSON|JSONB|SERIAL|BIGSERIAL|XML)\\b", tokenType: .type, options: [.caseInsensitive]),
                 HighlightRule(pattern: "\\b(SELECT|FROM|WHERE|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|ALTER|DROP|TRUNCATE|TABLE|VIEW|INDEX|PROCEDURE|FUNCTION|TRIGGER|DATABASE|SCHEMA|PRIMARY|FOREIGN|KEY|REFERENCES|CONSTRAINT|UNIQUE|CHECK|DEFAULT|NULL|NOT|AND|OR|IN|EXISTS|BETWEEN|LIKE|ILIKE|IS|AS|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|ON|USING|GROUP|BY|HAVING|ORDER|ASC|DESC|LIMIT|OFFSET|TOP|DISTINCT|UNION|ALL|CASE|WHEN|THEN|ELSE|END|BEGIN|COMMIT|ROLLBACK|TRANSACTION|DECLARE|EXEC|EXECUTE|RETURN|RETURNS|CURSOR|FETCH|OPEN|CLOSE|WITH|OVER|PARTITION|GRANT|REVOKE|IF|WHILE|LOOP)\\b", tokenType: .keyword, options: [.caseInsensitive]),
                 HighlightRule(pattern: "@@[A-Za-z0-9_]+|@[A-Za-z0-9_]+|:[A-Za-z0-9_]+", tokenType: .preprocessor, options: []),
-                HighlightRule(pattern: "'(?:''|[^'])*'|\"(?:\\\\.|[^\"\\\\])*\"", tokenType: .string, options: []),
+                HighlightRule(pattern: "'(?:''|[^'\\r\\n])*'|\"(?:\\\\.|[^\"\\\\\\r\\n])*\"", tokenType: .string, options: []),
                 HighlightRule(pattern: "--.*", tokenType: .comment, options: []),
                 HighlightRule(pattern: "/\\*[\\s\\S]*?\\*/", tokenType: .comment, options: [])
             ]
@@ -557,7 +597,7 @@ public final class SyntaxHighlighter {
                 HighlightRule(pattern: "\\b(int|float|str|bool|list|dict|set|tuple|bytes|object|type|Exception|None|True|False|self|cls)\\b", tokenType: .type, options: []),
                 HighlightRule(pattern: "\\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield|match|case)\\b", tokenType: .keyword, options: []),
                 HighlightRule(pattern: "@[A-Za-z_][A-Za-z0-9_.]*", tokenType: .preprocessor, options: []),
-                HighlightRule(pattern: "\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'", tokenType: .string, options: []),
+                HighlightRule(pattern: "\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:\\\\.|[^\"\\\\\\r\\n])*\"|'(?:\\\\.|[^'\\\\\\r\\n])*'", tokenType: .string, options: []),
                 HighlightRule(pattern: "#.*", tokenType: .comment, options: [])
             ]
 
@@ -568,7 +608,11 @@ public final class SyntaxHighlighter {
                 HighlightRule(pattern: "\\b([A-Z][A-Za-z0-9_]*|string|number|boolean|any|void|int|float|double|bool|char|byte|usize|isize|i32|i64|u32|u64|f32|f64)\\b", tokenType: .type, options: []),
                 HighlightRule(pattern: "\\b(if|else|for|while|do|switch|case|default|break|continue|return|function|func|fn|def|let|var|const|val|mut|struct|class|enum|interface|protocol|trait|impl|type|typealias|import|export|from|package|module|namespace|using|pub|public|private|protected|internal|static|final|override|async|await|try|catch|finally|throw|throws|new|this|self|super|true|false|null|nil|undefined|guard|defer|where|in|is|as|match)\\b", tokenType: .keyword, options: []),
                 HighlightRule(pattern: "@[A-Za-z_][A-Za-z0-9_]*|\\$[A-Za-z_][A-Za-z0-9_]*", tokenType: .preprocessor, options: []),
-                HighlightRule(pattern: "\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'|`(?:\\\\.|[^`\\\\])*`", tokenType: .string, options: []),
+                // In Rust a single quote is a character ('x', '\n') or a lifetime (&'a), never a string;
+                // its "..." strings may run over several lines.
+                language == .rust
+                    ? HighlightRule(pattern: "\\br(#*)\"[\\s\\S]*?\"\\1|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\(?:u\\{[0-9A-Fa-f]{1,6}\\}|x[0-9A-Fa-f]{2}|.)|[^'\\\\\\r\\n])'", tokenType: .string, options: [])
+                    : HighlightRule(pattern: "\"\"\"[\\s\\S]*?\"\"\"|\"(?:\\\\.|[^\"\\\\\\r\\n])*\"|'(?:\\\\.|[^'\\\\\\r\\n])*'|`(?:\\\\.|[^`\\\\])*`", tokenType: .string, options: []),
                 HighlightRule(pattern: "//.*|#.*", tokenType: .comment, options: []),
                 HighlightRule(pattern: "/\\*[\\s\\S]*?\\*/", tokenType: .comment, options: [])
             ]
@@ -578,7 +622,7 @@ public final class SyntaxHighlighter {
                 HighlightRule(pattern: "</?[A-Za-z0-9:_-]+|/?>", tokenType: .keyword, options: []),
                 HighlightRule(pattern: "\\b[A-Za-z0-9:_-]+(?=\\s*=)", tokenType: .type, options: []),
                 HighlightRule(pattern: "&[A-Za-z0-9#]+;", tokenType: .number, options: []),
-                HighlightRule(pattern: "\"[^\"]*\"|'[^']*'", tokenType: .string, options: []),
+                HighlightRule(pattern: "\"[^\"\\r\\n]*\"|'[^'\\r\\n]*'", tokenType: .string, options: []),
                 HighlightRule(pattern: "<!--[\\s\\S]*?-->", tokenType: .comment, options: [])
             ]
 
@@ -588,7 +632,7 @@ public final class SyntaxHighlighter {
                 HighlightRule(pattern: "([.#][A-Za-z0-9_-]+|\\b(div|span|body|html|a|p|h[1-6]|ul|li|table|tr|td|button|input|header|footer|main|section|nav)\\b)", tokenType: .keyword, options: []),
                 HighlightRule(pattern: "[A-Za-z-]+(?=\\s*:)", tokenType: .type, options: []),
                 HighlightRule(pattern: "@[A-Za-z_-]+", tokenType: .preprocessor, options: []),
-                HighlightRule(pattern: "\"[^\"]*\"|'[^']*'", tokenType: .string, options: []),
+                HighlightRule(pattern: "\"[^\"\\r\\n]*\"|'[^'\\r\\n]*'", tokenType: .string, options: []),
                 HighlightRule(pattern: "/\\*[\\s\\S]*?\\*/", tokenType: .comment, options: [])
             ]
 
@@ -596,7 +640,7 @@ public final class SyntaxHighlighter {
             return [
                 HighlightRule(pattern: "\\b(true|false|null)\\b", tokenType: .keyword, options: []),
                 HighlightRule(pattern: "-?\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b", tokenType: .number, options: []),
-                HighlightRule(pattern: "\"(?:\\\\.|[^\"\\\\])*\"", tokenType: .string, options: []),
+                HighlightRule(pattern: "\"(?:\\\\.|[^\"\\\\\\r\\n])*\"", tokenType: .string, options: []),
                 HighlightRule(pattern: "\"(?:\\\\.|[^\"\\\\])*\"(?=\\s*:)", tokenType: .type, options: [])
             ]
 
@@ -606,7 +650,7 @@ public final class SyntaxHighlighter {
                 HighlightRule(pattern: "^\\s*[A-Za-z0-9_.-]+(?=\\s*[:=])", tokenType: .type, options: [.anchorsMatchLines]),
                 HighlightRule(pattern: "\\b(true|false|yes|no|on|off|null)\\b", tokenType: .keyword, options: [.caseInsensitive]),
                 HighlightRule(pattern: "\\b\\d+(\\.\\d+)?\\b", tokenType: .number, options: []),
-                HighlightRule(pattern: "\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'", tokenType: .string, options: []),
+                HighlightRule(pattern: "\"(?:\\\\.|[^\"\\\\\\r\\n])*\"|'(?:\\\\.|[^'\\\\\\r\\n])*'", tokenType: .string, options: []),
                 HighlightRule(pattern: "[#;].*", tokenType: .comment, options: [])
             ]
 
@@ -634,7 +678,7 @@ public final class SyntaxHighlighter {
                 HighlightRule(pattern: "^\\s*[A-Za-z_.$][A-Za-z0-9_.$]*:", tokenType: .function, options: [.anchorsMatchLines]),
                 HighlightRule(pattern: "\\b(mov|lea|add|sub|mul|imul|div|idiv|inc|dec|and|or|xor|not|shl|shr|cmp|test|jmp|je|jne|jz|jnz|jg|jge|jl|jle|call|ret|push|pop|nop|syscall|int|ldr|str|b|bl|cbz|cbnz|svc)\\b", tokenType: .keyword, options: [.caseInsensitive]),
                 HighlightRule(pattern: "\\b(rax|rbx|rcx|rdx|rsi|rdi|rbp|rsp|r8|r9|r10|r11|r12|r13|r14|r15|eax|ebx|ecx|edx|esi|edi|ebp|esp|ax|bx|cx|dx|al|bl|cl|dl|x[0-9]{1,2}|w[0-9]{1,2}|sp|lr|pc)\\b", tokenType: .type, options: [.caseInsensitive]),
-                HighlightRule(pattern: "\"[^\"]*\"|'[^']*'", tokenType: .string, options: []),
+                HighlightRule(pattern: "\"[^\"\\r\\n]*\"|'[^'\\r\\n]*'", tokenType: .string, options: []),
                 HighlightRule(pattern: ";.*", tokenType: .comment, options: [])
             ]
 
